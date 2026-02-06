@@ -1,21 +1,26 @@
+import json
 from django.http import JsonResponse
-from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
 
-from .services import get_user_document, log_query
+from .models import Document
+from .services import (
+    get_user_document,
+    answer_document_question,
+    log_query
+)
 
+from llm.embeddings import DummyEmbeddingProvider
+from documents.tests import DummyLLM
 
 @login_required
 @require_POST
-def query_document(request, document_id):
-    """
-    Dummy endpoint to test ownership enforcement.
-    """
+def query_document(request, document_id):  
     document = get_user_document(request.user, document_id)
-
     question = request.POST.get("question", "")
     query = log_query(document=document, question=question)
-
     return JsonResponse(
         {
             "document_id": document.id,
@@ -23,27 +28,6 @@ def query_document(request, document_id):
             "message": "Query accepted",
         }
     )
-
-import json
-
-from django.http import JsonResponse
-from django.views.decorators.http import require_POST
-from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
-
-from .models import Document
-from .services import (
-    get_user_document,
-    answer_document_question,
-)
-
-from llm.embeddings import DummyEmbeddingProvider
-from documents.tests import DummyLLM
-
-
-# --------------------------------
-# Upload Document
-# --------------------------------
 
 @csrf_exempt
 @require_POST
@@ -67,11 +51,6 @@ def upload_document(request):
         status=201,
     )
 
-
-# --------------------------------
-# Query Document
-# --------------------------------
-
 @csrf_exempt
 @require_POST
 @login_required
@@ -91,8 +70,8 @@ def query_document(request, document_id):
         user=request.user,
         document=document,
         question=question,
-        embedding_provider=DummyEmbeddingProvider(),  # prod swap later
-        llm=DummyLLM(),                              # prod swap later
+        embedding_provider=DummyEmbeddingProvider(),  
+        llm=DummyLLM(),                              
     )
 
     return JsonResponse(
