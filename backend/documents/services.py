@@ -11,6 +11,7 @@ from llm.embeddings import EmbeddingProvider
 from llm.vectorstore import FAISSVectorStore
 from llm.chunking import chunk_text
 
+
 def get_user_document(user, document_id):
     """
     Fetch a document owned by the given user.
@@ -26,6 +27,7 @@ def get_user_document(user, document_id):
 
     return document
 
+
 def log_query(document, question, answer="", latency_ms=None, tokens_used=None):
     """
     Log a user query against a document.
@@ -37,6 +39,7 @@ def log_query(document, question, answer="", latency_ms=None, tokens_used=None):
         latency_ms=latency_ms,
         tokens_used=tokens_used,
     )
+
 
 def answer_document_question(
     *,
@@ -57,8 +60,8 @@ def answer_document_question(
     # 1. Load or Build Vector Store
     # -------------------------
     index_ready = (
-        index_dir is not None 
-        and index_dir.exists() 
+        index_dir is not None
+        and index_dir.exists()
         and (index_dir / "index.faiss").exists()
     )
 
@@ -69,10 +72,8 @@ def answer_document_question(
         )
     else:
         # TEST / FALLBACK MODE: Build temporary FAISS index
-        # Ensure your embedding_provider has a .dim attribute
         vector_store = FAISSVectorStore(dim=embedding_provider.dim)
 
-        # Read file safely (decoding errors ignored for robust PDF parsing)
         document.pdf_file.open("rb")
         try:
             text = document.pdf_file.read().decode("utf-8", errors="ignore")
@@ -87,7 +88,7 @@ def answer_document_question(
             vector_store.add(embeddings, chunks)
 
     # -------------------------
-    # 2. Retrieve context
+    # 2. Retrieve context + citations
     # -------------------------
     context, citations = retrieve_context_from_faiss(
         question=question,
@@ -96,7 +97,7 @@ def answer_document_question(
     )
 
     # -------------------------
-    # 3. Run LangGraph
+    # 3. Run LangGraph (PASS CITATIONS)
     # -------------------------
     graph = build_qa_graph(llm)
 
@@ -104,6 +105,7 @@ def answer_document_question(
         {
             "question": question,
             "context": context,
+            "citations": citations,   # 🔑 CRITICAL
             "answer": None,
             "error": None,
             "tokens_used": None,
@@ -115,10 +117,15 @@ def answer_document_question(
     # -------------------------
     # 4. Persist result
     # -------------------------
-    return QueryLog.objects.create(
+    log = QueryLog.objects.create(
         document=document,
         question=question,
         answer=result.get("answer", "No answer generated."),
         latency_ms=latency_ms,
         tokens_used=result.get("tokens_used"),
     )
+
+    # Attach citations at runtime (no migration yet)
+    log.citations = result.get("citations", [])
+
+    return log
