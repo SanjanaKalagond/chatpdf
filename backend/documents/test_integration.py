@@ -6,7 +6,6 @@ from documents.services import answer_document_question
 from llm.embeddings import DummyEmbeddingProvider
 from documents.tests import DummyLLM
 from llm.prompts import REFUSAL_TEXT
-
 User = get_user_model()
 
 class EndToEndQATest(TestCase):
@@ -16,7 +15,10 @@ class EndToEndQATest(TestCase):
             owner=user,
             filename="doc.txt",
         )
+<<<<<<< HEAD
 
+=======
+>>>>>>> bc46b94 (Committing)
         doc.pdf_file.save(
             "doc.txt",
             ContentFile("LangChain is a framework for LLMs."),
@@ -31,4 +33,8 @@ class EndToEndQATest(TestCase):
         self.assertEqual(log.answer, REFUSAL_TEXT)
         self.assertGreater(len(log.citations), 0)
         self.assertIn("LangChain", log.citations[0]['chunk_text'])
+<<<<<<< HEAD
         self.assertIsNotNone(log.latency_ms)
+=======
+        self.assertIsNotNone(log.latency_ms)
+>>>>>>> bc46b94 (Committing)

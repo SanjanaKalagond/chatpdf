@@ -2,29 +2,35 @@ import time
 from pathlib import Path
 from django.core.exceptions import PermissionDenied
 from .models import Document, QueryLog
+<<<<<<< HEAD
 
+=======
+>>>>>>> bc46b94 (Committing)
 from llm.graph import build_qa_graph
 from llm.retrieval_faiss import load_faiss_store, retrieve_context_from_faiss
 from llm.embeddings import EmbeddingProvider
 from llm.vectorstore import FAISSVectorStore
 from llm.chunking import chunk_text
 
-
 def get_user_document(user, document_id):
+<<<<<<< HEAD
     """ Fetch a document owned by the given user.
     Raises PermissionDenied if access is invalid. """
+=======
+>>>>>>> bc46b94 (Committing)
     try:
         document = Document.objects.get(id=document_id)
     except Document.DoesNotExist:
         raise PermissionDenied("Document does not exist")
-
     if document.owner != user:
         raise PermissionDenied("You do not own this document")
     return document
 
-
 def log_query(document, question, answer="", latency_ms=None, tokens_used=None):
+<<<<<<< HEAD
     """Log a user query against a document."""
+=======
+>>>>>>> bc46b94 (Committing)
     return QueryLog.objects.create(
         document=document,
         question=question,
@@ -42,6 +48,10 @@ def answer_document_question(
     llm,
     index_dir: Path = Path("vector_index"),
 ):
+<<<<<<< HEAD
+=======
+
+>>>>>>> bc46b94 (Committing)
     start_time = time.time()
     index_ready = (
         index_dir is not None
@@ -68,7 +78,10 @@ def answer_document_question(
                 [c["chunk_text"] for c in chunks]
             )
             vector_store.add(embeddings, chunks)
+<<<<<<< HEAD
 
+=======
+>>>>>>> bc46b94 (Committing)
     context, citations = retrieve_context_from_faiss(
         question=question,
         embedding_provider=embedding_provider,
@@ -87,6 +100,10 @@ def answer_document_question(
         }
     )
     latency_ms = int((time.time() - start_time) * 1000)
+<<<<<<< HEAD
+=======
+
+>>>>>>> bc46b94 (Committing)
     log = QueryLog.objects.create(
         document=document,
         question=question,

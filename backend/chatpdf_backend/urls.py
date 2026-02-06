@@ -7,8 +7,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("documents.urls")),
 ]
-
-# Serve uploaded files in development only
 if settings.DEBUG:
     urlpatterns += static(
         settings.MEDIA_URL,

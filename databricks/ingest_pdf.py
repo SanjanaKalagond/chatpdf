@@ -1,49 +1,18 @@
 import sys
 from pathlib import Path
 
-# --------------------------------------------------
-# Ensure project root is on PYTHONPATH
-# --------------------------------------------------
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.append(str(PROJECT_ROOT))
-
-"""
-Databricks-style batch ingestion script (SAFE MODE).
-
-- Reads .txt files
-- Reads .pdf files
-- Chunks text
-- Embeds chunks
-- Builds FAISS index
-- Persists index + metadata (unless --dry-run)
-
-Designed to be:
-- CPU only
-- Single-threaded
-- Laptop safe
-"""
-
 import argparse
 import pdfplumber
-
 from llm.chunking import chunk_text
 from llm.embeddings import DummyEmbeddingProvider
 from llm.vectorstore import FAISSVectorStore
 
-
-# -------------------------
-# SAFETY LIMITS (IMPORTANT)
-# -------------------------
-
-MAX_DOC_SIZE_CHARS = 500_000        # ~500 KB
+MAX_DOC_SIZE_CHARS = 500_000        
 MAX_CHUNKS_PER_DOC = 200
-FAISS_DIM = 5                       # matches DummyEmbeddingProvider
+FAISS_DIM = 5                       
 INDEX_DIR = Path("vector_index")
-
-
-# -------------------------
-# INGESTION HELPERS
-# -------------------------
 
 def ingest_txt_file(
     *,
@@ -77,7 +46,6 @@ def ingest_txt_file(
         embeddings=embeddings,
         metadatas=chunks,
     )
-
 
 def extract_text_from_pdf(file_path: Path) -> str:
     text_parts = []
@@ -132,11 +100,6 @@ def ingest_pdf_file(
         metadatas=chunks,
     )
 
-
-# -------------------------
-# MAIN ENTRYPOINT
-# -------------------------
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -150,7 +113,6 @@ def main():
     embedding_provider = DummyEmbeddingProvider()
     vector_store = FAISSVectorStore(dim=FAISS_DIM)
 
-    # ---- TXT INGESTION ----
     txt_dir = Path("data/txt")
     txt_files = list(txt_dir.glob("*.txt")) if txt_dir.exists() else []
 
@@ -165,7 +127,6 @@ def main():
             dry_run=args.dry_run,
         )
 
-    # ---- PDF INGESTION ----
     pdf_dir = Path("data/pdf")
     pdf_files = list(pdf_dir.glob("*.pdf")) if pdf_dir.exists() else []
 

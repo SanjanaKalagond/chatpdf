@@ -19,8 +19,6 @@ django.setup()
 import streamlit as st
 from pypdf import PdfReader 
 from langchain_google_genai import ChatGoogleGenerativeAI # pip install langchain-google-genai
-
-# Internal project modules
 from llm.embeddings import DummyEmbeddingProvider
 from llm.vectorstore import InMemoryVectorStore
 from llm.retrieval import retrieve_context

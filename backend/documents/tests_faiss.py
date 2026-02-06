@@ -7,7 +7,6 @@ class FAISSRetrievalTests(TestCase):
     def test_faiss_returns_relevant_context(self):
         embedding_provider = DummyEmbeddingProvider()
         vector_store = FAISSVectorStore(dim=5)
-
         document_text = (
             "Python is a programming language.\n\n"
             "LangChain helps build LLM applications.\n\n"

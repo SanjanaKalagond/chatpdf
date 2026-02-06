@@ -17,7 +17,11 @@ from documents.tests import DummyLLM
 
 @login_required
 @require_POST
+<<<<<<< HEAD
 def query_document(request, document_id):  
+=======
+def query_document(request, document_id):
+>>>>>>> bc46b94 (Committing)
     document = get_user_document(request.user, document_id)
     question = request.POST.get("question", "")
     query = log_query(document=document, question=question)
@@ -29,6 +33,10 @@ def query_document(request, document_id):
         }
     )
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> bc46b94 (Committing)
 @csrf_exempt
 @require_POST
 @login_required

@@ -1,8 +1,6 @@
 from django.test import TestCase
-
 from llm.grounding import enforce_grounding
 from llm.prompts import REFUSAL_TEXT
-
 
 class GroundingTests(TestCase):
     def test_refuses_when_no_citations(self):

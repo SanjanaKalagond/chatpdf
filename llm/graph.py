@@ -1,11 +1,9 @@
 from typing import TypedDict, Optional, List
 from langgraph.graph import StateGraph, END
-
 from .chains import build_rag_chain, postprocess_answer
 from .prompts import REFUSAL_TEXT
 from .tokens import count_tokens
 from .grounding import enforce_grounding
-
 
 class QAState(TypedDict):
     question: str
@@ -14,7 +12,6 @@ class QAState(TypedDict):
     answer: Optional[str]
     error: Optional[str]
     tokens_used: Optional[int]
-
 
 def build_qa_graph(llm):
     graph = StateGraph(QAState)
@@ -41,7 +38,6 @@ def build_qa_graph(llm):
             }
         )
 
-        # Postprocess + grounding enforcement
         answer = enforce_grounding(
             answer=postprocess_answer(raw, state["context"]),
             citations=state["citations"],
@@ -55,7 +51,6 @@ def build_qa_graph(llm):
             **state,
             "answer": answer,
             "tokens_used": tokens,
-            # IMPORTANT: citations pass through unchanged
             "citations": state["citations"],
         }
 
@@ -64,7 +59,6 @@ def build_qa_graph(llm):
             **state,
             "answer": REFUSAL_TEXT,
             "tokens_used": None,
-            # IMPORTANT: refusal wipes citations
             "citations": [],
         }
 
@@ -78,7 +72,6 @@ def build_qa_graph(llm):
         "validate",
         lambda s: "handle_error" if s.get("error") else "generate",
     )
-
     graph.add_edge("generate", END)
     graph.add_edge("handle_error", END)
 

@@ -3,29 +3,15 @@ import numpy as np
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-
 class VectorStore(ABC):
-    """
-    Interface for vector stores.
-    """
-
     @abstractmethod
     def add(self, embeddings: List[List[float]], metadatas: List[dict]):
         pass
-
     @abstractmethod
     def search(self, query_embedding: List[float], k: int = 5) -> List[dict]:
         pass
-
-
-# -------------------------
-# In-memory (Validation & Unit Tests)
-# -------------------------
-
+        
 class InMemoryVectorStore(VectorStore):
-    """
-    Simple in-memory vector store for testing and cost reasoning.
-    """
 
     def __init__(self):
         self.vectors = []
@@ -49,11 +35,6 @@ class InMemoryVectorStore(VectorStore):
         scores.sort(key=lambda x: x[0], reverse=True)
         return [m for _, m in scores[:k]]
 
-
-# -------------------------
-# FAISS (Production-grade RAG)
-# -------------------------
-
 class FAISSVectorStore(VectorStore):
     """
     FAISS-backed vector store with disk persistence.
@@ -73,7 +54,6 @@ class FAISSVectorStore(VectorStore):
     def search(self, query_embedding: List[float], k: int = 5) -> List[dict]:
         if self.index.ntotal == 0:
             return []
-
         query = np.array([query_embedding]).astype("float32")
         _, indices = self.index.search(query, k)
 
@@ -85,14 +65,7 @@ class FAISSVectorStore(VectorStore):
 
         return results
 
-    # -------------------------
-    # Persistence (CRITICAL)
-    # -------------------------
-
     def save(self, path: Path) -> None:
-        """
-        Persist FAISS index and metadata to disk.
-        """
         import faiss
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
@@ -101,9 +74,6 @@ class FAISSVectorStore(VectorStore):
         np.save(path / "metadatas.npy", np.array(self.metadatas, dtype=object))
 
     def load(self, index_path: Path) -> None:
-        """
-        Load FAISS index and metadata from disk.
-        """
         import faiss
         from pathlib import Path
 
