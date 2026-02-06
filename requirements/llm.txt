@@ -1,1 +1,5 @@
+langchain
+langgraph
+openai
+tiktoken
 
