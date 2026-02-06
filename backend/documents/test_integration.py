@@ -40,5 +40,8 @@ class EndToEndQATest(TestCase):
         # DummyLLM hallucinates → grounding layer must refuse
         self.assertEqual(log.answer, REFUSAL_TEXT)
 
+        # Refusal must NOT surface citations
+        self.assertEqual(log.citations, [])
+
         # Latency should always be recorded
         self.assertIsNotNone(log.latency_ms)
