@@ -1,8 +1,15 @@
 import time
+from pathlib import Path
 from django.core.exceptions import PermissionDenied
 
 from .models import Document, QueryLog
 
+# LLM / Retrieval components
+from llm.graph import build_qa_graph
+from llm.retrieval_faiss import load_faiss_store, retrieve_context_from_faiss
+from llm.embeddings import EmbeddingProvider
+from llm.vectorstore import FAISSVectorStore
+from llm.chunking import chunk_text
 
 def get_user_document(user, document_id):
     """
@@ -19,7 +26,6 @@ def get_user_document(user, document_id):
 
     return document
 
-
 def log_query(document, question, answer="", latency_ms=None, tokens_used=None):
     """
     Log a user query against a document.
@@ -32,40 +38,87 @@ def log_query(document, question, answer="", latency_ms=None, tokens_used=None):
         tokens_used=tokens_used,
     )
 
-
-def run_qa(graph, *, document, question: str, context: str):
+def answer_document_question(
+    *,
+    user,
+    document,
+    question: str,
+    embedding_provider: EmbeddingProvider,
+    llm,
+    index_dir: Path = Path("vector_index"),
+):
     """
-    Execute a LangGraph QA flow and persist the result.
-
-    - graph: compiled LangGraph
-    - document: Document instance (already ownership-validated)
-    - question: user question
-    - context: retrieved context (can be empty)
-
-    Returns:
-        QueryLog instance
+    Django → FAISS → LangGraph orchestration.
+    Loads existing index if available, otherwise builds a temporary one.
     """
     start_time = time.time()
 
-    # Execute graph
+    # -------------------------
+    # 1. Load or Build Vector Store
+    # -------------------------
+    index_ready = (
+        index_dir is not None 
+        and index_dir.exists() 
+        and (index_dir / "index.faiss").exists()
+    )
+
+    if index_ready:
+        vector_store = load_faiss_store(
+            embedding_provider=embedding_provider,
+            index_dir=index_dir,
+        )
+    else:
+        # TEST / FALLBACK MODE: Build temporary FAISS index
+        # Ensure your embedding_provider has a .dim attribute
+        vector_store = FAISSVectorStore(dim=embedding_provider.dim)
+
+        # Read file safely (decoding errors ignored for robust PDF parsing)
+        document.pdf_file.open("rb")
+        try:
+            text = document.pdf_file.read().decode("utf-8", errors="ignore")
+        finally:
+            document.pdf_file.close()
+
+        chunks = chunk_text(text)
+        if chunks:
+            embeddings = embedding_provider.embed(
+                [c["chunk_text"] for c in chunks]
+            )
+            vector_store.add(embeddings, chunks)
+
+    # -------------------------
+    # 2. Retrieve context
+    # -------------------------
+    context, citations = retrieve_context_from_faiss(
+        question=question,
+        embedding_provider=embedding_provider,
+        vector_store=vector_store,
+    )
+
+    # -------------------------
+    # 3. Run LangGraph
+    # -------------------------
+    graph = build_qa_graph(llm)
+
     result = graph.invoke(
         {
             "question": question,
             "context": context,
             "answer": None,
             "error": None,
+            "tokens_used": None,
         }
     )
 
     latency_ms = int((time.time() - start_time) * 1000)
 
-    answer = result.get("answer", "")
-    tokens_used = result.get("tokens_used")  # optional, may be None
-
-    return log_query(
+    # -------------------------
+    # 4. Persist result
+    # -------------------------
+    return QueryLog.objects.create(
         document=document,
         question=question,
-        answer=answer,
+        answer=result.get("answer", "No answer generated."),
         latency_ms=latency_ms,
-        tokens_used=tokens_used,
+        tokens_used=result.get("tokens_used"),
     )

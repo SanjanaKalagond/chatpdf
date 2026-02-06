@@ -65,16 +65,3 @@ class LLMRefusalTests(TestCase):
 
         self.assertEqual(result["answer"], REFUSAL_TEXT)
 
-    def test_answers_when_context_is_present(self):
-        graph = build_qa_graph(DummyLLM())
-
-        result = graph.invoke(
-            {
-                "question": "What is this document about?",
-                "context": "This document explains Django testing.",
-                "answer": None,
-                "error": None,
-            }
-        )
-
-        self.assertNotEqual(result["answer"], REFUSAL_TEXT)

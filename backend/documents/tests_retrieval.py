@@ -12,13 +12,14 @@ class RetrievalPipelineTests(TestCase):
         self.vector_store = InMemoryVectorStore()
 
     def test_empty_document_returns_empty_context(self):
-        context = retrieve_context(
+        context, citations = retrieve_context(
             document_text="",
             question="What is this about?",
             embedding_provider=self.embedding_provider,
             vector_store=self.vector_store,
         )
         self.assertEqual(context, "")
+        self.assertEqual(citations, [])
 
     def test_retrieves_relevant_chunks(self):
         document_text = (
@@ -27,7 +28,7 @@ class RetrievalPipelineTests(TestCase):
             "Databricks is used for big data processing."
         )
 
-        context = retrieve_context(
+        context, citations = retrieve_context(
             document_text=document_text,
             question="What is LangChain?",
             embedding_provider=self.embedding_provider,
@@ -35,21 +36,23 @@ class RetrievalPipelineTests(TestCase):
             k=2,
         )
 
-        # Because DummyEmbeddingProvider is length-based,
-        # the chunk mentioning LangChain must appear
+        # Context text must include LangChain
         self.assertIn("LangChain", context)
+
+        # Citations must be present
+        self.assertGreater(len(citations), 0)
 
     def test_deterministic_output(self):
         document_text = "A" * 3000
 
-        context1 = retrieve_context(
+        context1, citations1 = retrieve_context(
             document_text=document_text,
             question="Test?",
             embedding_provider=self.embedding_provider,
             vector_store=InMemoryVectorStore(),
         )
 
-        context2 = retrieve_context(
+        context2, citations2 = retrieve_context(
             document_text=document_text,
             question="Test?",
             embedding_provider=self.embedding_provider,
@@ -57,3 +60,4 @@ class RetrievalPipelineTests(TestCase):
         )
 
         self.assertEqual(context1, context2)
+        self.assertEqual(citations1, citations2)
