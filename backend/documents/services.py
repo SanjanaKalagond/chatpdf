@@ -1,10 +1,8 @@
 import time
 from pathlib import Path
 from django.core.exceptions import PermissionDenied
-
 from .models import Document, QueryLog
 
-# LLM / Retrieval components
 from llm.graph import build_qa_graph
 from llm.retrieval_faiss import load_faiss_store, retrieve_context_from_faiss
 from llm.embeddings import EmbeddingProvider
@@ -13,10 +11,8 @@ from llm.chunking import chunk_text
 
 
 def get_user_document(user, document_id):
-    """
-    Fetch a document owned by the given user.
-    Raises PermissionDenied if access is invalid.
-    """
+    """ Fetch a document owned by the given user.
+    Raises PermissionDenied if access is invalid. """
     try:
         document = Document.objects.get(id=document_id)
     except Document.DoesNotExist:
@@ -24,14 +20,11 @@ def get_user_document(user, document_id):
 
     if document.owner != user:
         raise PermissionDenied("You do not own this document")
-
     return document
 
 
 def log_query(document, question, answer="", latency_ms=None, tokens_used=None):
-    """
-    Log a user query against a document.
-    """
+    """Log a user query against a document."""
     return QueryLog.objects.create(
         document=document,
         question=question,
@@ -39,7 +32,6 @@ def log_query(document, question, answer="", latency_ms=None, tokens_used=None):
         latency_ms=latency_ms,
         tokens_used=tokens_used,
     )
-
 
 def answer_document_question(
     *,
@@ -50,15 +42,7 @@ def answer_document_question(
     llm,
     index_dir: Path = Path("vector_index"),
 ):
-    """
-    Django → FAISS → LangGraph orchestration.
-    Loads existing index if available, otherwise builds a temporary one.
-    """
     start_time = time.time()
-
-    # -------------------------
-    # 1. Load or Build Vector Store
-    # -------------------------
     index_ready = (
         index_dir is not None
         and index_dir.exists()
@@ -71,9 +55,7 @@ def answer_document_question(
             index_dir=index_dir,
         )
     else:
-        # TEST / FALLBACK MODE: Build temporary FAISS index
         vector_store = FAISSVectorStore(dim=embedding_provider.dim)
-
         document.pdf_file.open("rb")
         try:
             text = document.pdf_file.read().decode("utf-8", errors="ignore")
@@ -87,36 +69,24 @@ def answer_document_question(
             )
             vector_store.add(embeddings, chunks)
 
-    # -------------------------
-    # 2. Retrieve context + citations
-    # -------------------------
     context, citations = retrieve_context_from_faiss(
         question=question,
         embedding_provider=embedding_provider,
         vector_store=vector_store,
     )
 
-    # -------------------------
-    # 3. Run LangGraph (PASS CITATIONS)
-    # -------------------------
     graph = build_qa_graph(llm)
-
     result = graph.invoke(
         {
             "question": question,
             "context": context,
-            "citations": citations,   # 🔑 CRITICAL
+            "citations": citations, 
             "answer": None,
             "error": None,
             "tokens_used": None,
         }
     )
-
     latency_ms = int((time.time() - start_time) * 1000)
-
-    # -------------------------
-    # 4. Persist result
-    # -------------------------
     log = QueryLog.objects.create(
         document=document,
         question=question,
@@ -124,8 +94,6 @@ def answer_document_question(
         latency_ms=latency_ms,
         tokens_used=result.get("tokens_used"),
     )
-
-    # Attach citations at runtime (no migration yet)
     log.citations = result.get("citations", [])
 
     return log
