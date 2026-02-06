@@ -2,10 +2,8 @@ from django.apps import AppConfig
 import sys
 from pathlib import Path
 
-# Add project root to PYTHONPATH
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.append(str(PROJECT_ROOT))
-
 
 class DocumentsConfig(AppConfig):
     default_auto_field = "django.db.models.BigAutoField"
