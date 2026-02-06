@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual env
+venv/
+.venv/
+
+# Env vars
+.env
+.env.*
+
+# Django
+db.sqlite3
+media/
+staticfiles/
+
+# Streamlit
+.streamlit/
+
+# Tooling
+.pytest_cache/
+.mypy_cache/
+.cache/
+
+# Editor
+.vscode/
+.idea/
+.DS_Store
+.databricks/
+.bundle/
+# Data/PDFs
+backend/documents/uploads/
+*.pdf
