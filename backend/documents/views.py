@@ -24,3 +24,82 @@ def query_document(request, document_id):
         }
     )
 
+import json
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+
+from .models import Document
+from .services import (
+    get_user_document,
+    answer_document_question,
+)
+
+from llm.embeddings import DummyEmbeddingProvider
+from documents.tests import DummyLLM
+
+
+# --------------------------------
+# Upload Document
+# --------------------------------
+
+@csrf_exempt
+@require_POST
+@login_required
+def upload_document(request):
+    uploaded_file = request.FILES.get("file")
+    if not uploaded_file:
+        return JsonResponse({"error": "No file provided"}, status=400)
+
+    document = Document.objects.create(
+        owner=request.user,
+        filename=uploaded_file.name,
+        pdf_file=uploaded_file,
+    )
+
+    return JsonResponse(
+        {
+            "document_id": document.id,
+            "filename": document.filename,
+        },
+        status=201,
+    )
+
+
+# --------------------------------
+# Query Document
+# --------------------------------
+
+@csrf_exempt
+@require_POST
+@login_required
+def query_document(request, document_id):
+    try:
+        payload = json.loads(request.body)
+        question = payload.get("question", "").strip()
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    if not question:
+        return JsonResponse({"error": "Question required"}, status=400)
+
+    document = get_user_document(request.user, document_id)
+
+    log = answer_document_question(
+        user=request.user,
+        document=document,
+        question=question,
+        embedding_provider=DummyEmbeddingProvider(),  # prod swap later
+        llm=DummyLLM(),                              # prod swap later
+    )
+
+    return JsonResponse(
+        {
+            "answer": log.answer,
+            "citations": log.citations,
+            "latency_ms": log.latency_ms,
+            "tokens_used": log.tokens_used,
+        }
+    )

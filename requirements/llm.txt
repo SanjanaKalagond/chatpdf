@@ -1,5 +1,4 @@
-langchain
+langchain<0.1.0
 langgraph
-openai
+openai>=1.0.0
 tiktoken
-

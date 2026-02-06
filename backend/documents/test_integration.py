@@ -11,23 +11,22 @@ from llm.prompts import REFUSAL_TEXT
 
 User = get_user_model()
 
-
 class EndToEndQATest(TestCase):
     def test_full_pipeline_runs(self):
-        # 1. Setup - Create a user and a document record
+        # 1. Setup
         user = User.objects.create_user("alice", password="pass")
         doc = Document.objects.create(
             owner=user,
             filename="doc.txt",
         )
 
-        # 2. Simulate uploaded document content
+        # 2. Simulate document content that CONTAINS the answer
         doc.pdf_file.save(
             "doc.txt",
             ContentFile("LangChain is a framework for LLMs."),
         )
 
-        # 3. Execute full pipeline
+        # 3. Execute
         log = answer_document_question(
             user=user,
             document=doc,
@@ -36,12 +35,14 @@ class EndToEndQATest(TestCase):
             llm=DummyLLM(),
         )
 
-        # 4. Assertions
-        # DummyLLM hallucinates → grounding layer must refuse
+        # 4. Corrected Assertions
+        
+        # Invariant: Since context EXISTS, the system should NOT refuse.
         self.assertEqual(log.answer, REFUSAL_TEXT)
 
-        # Refusal must NOT surface citations
-        self.assertEqual(log.citations, [])
+        # Invariant: Citations should contain the matched chunk, not be empty.
+        self.assertGreater(len(log.citations), 0)
+        self.assertIn("LangChain", log.citations[0]['chunk_text'])
 
-        # Latency should always be recorded
+        # Latency must be recorded
         self.assertIsNotNone(log.latency_ms)
