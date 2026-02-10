@@ -1,10 +1,6 @@
 from django.apps import AppConfig
 import sys
 from pathlib import Path
-<<<<<<< HEAD
-
-=======
->>>>>>> bc46b94 (Committing)
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.append(str(PROJECT_ROOT))
 

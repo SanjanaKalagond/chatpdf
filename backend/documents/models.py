@@ -1,10 +1,6 @@
 from django.db import models
 from django.conf import settings
 class Document(models.Model):
-<<<<<<< HEAD
-    """ Stores the uploaded PDF files and tracks their processing status """
-=======
->>>>>>> bc46b94 (Committing)
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -18,13 +14,7 @@ class Document(models.Model):
 
     def __str__(self):
         return f"{self.filename} ({self.owner.username})"
-<<<<<<< HEAD
-
 class QueryLog(models.Model):
-    """ Logs every interaction between the user and the LLM """
-=======
-class QueryLog(models.Model):
->>>>>>> bc46b94 (Committing)
     document = models.ForeignKey(
         Document,
         on_delete=models.CASCADE,

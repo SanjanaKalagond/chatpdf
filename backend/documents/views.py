@@ -14,24 +14,6 @@ from .models import Document
 from .services import get_user_document, answer_document_question
 from llm.embeddings import DummyEmbeddingProvider
 
-<<<<<<< Updated upstream
-@login_required
-@require_POST
-<<<<<<< HEAD
-def query_document(request, document_id):  
-=======
-def query_document(request, document_id):
->>>>>>> bc46b94 (Committing)
-    document = get_user_document(request.user, document_id)
-    question = request.POST.get("question", "")
-    query = log_query(document=document, question=question)
-    return JsonResponse(
-        {
-            "document_id": document.id,
-            "question": query.question,
-            "message": "Query accepted",
-        }
-=======
 User = get_user_model()
 
 
@@ -45,7 +27,6 @@ def api_auth(request):
     user, _ = User.objects.get_or_create(
         username="streamlit_service_user",
         defaults={"is_active": True},
->>>>>>> Stashed changes
     )
     request.user = user
 
@@ -61,10 +42,6 @@ def get_llm():
     )
 
 
-<<<<<<< HEAD
-=======
-
->>>>>>> bc46b94 (Committing)
 @csrf_exempt
 @require_POST
 def upload_document(request):
