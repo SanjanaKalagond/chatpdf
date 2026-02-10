@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -6,7 +7,7 @@ SECRET_KEY = "dev-secret-key-change-later"
 
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".app.github.dev"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -15,8 +16,6 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
-    # local apps
     "documents.apps.DocumentsConfig",
 ]
 
@@ -65,15 +64,19 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = "en-us"
-
 TIME_ZONE = "UTC"
-
 USE_I18N = True
 USE_TZ = True
 
 STATIC_URL = "static/"
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+VECTOR_INDEX_ROOT = BASE_DIR / "vector_index"
+
+STREAMLIT_API_KEY = os.environ.get("STREAMLIT_API_KEY", "dev-streamlit-key")
+
+if 'CODESPACE_NAME' in os.environ:
+    CSRF_TRUSTED_ORIGINS = [f"https://{os.environ['CODESPACE_NAME']}-8000.app.github.dev"]

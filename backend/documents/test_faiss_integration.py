@@ -8,10 +8,7 @@ from llm.embeddings import DummyEmbeddingProvider
 from documents.tests import DummyLLM
 
 User = get_user_model()
-<<<<<<< HEAD
 
-=======
->>>>>>> bc46b94 (Committing)
 class DjangoFAISSIntegrationTests(TestCase):
     def test_django_answers_using_faiss_index(self):
         user = User.objects.create_user("alice", password="pass")

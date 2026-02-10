@@ -36,10 +36,6 @@ class InMemoryVectorStore(VectorStore):
         return [m for _, m in scores[:k]]
 
 class FAISSVectorStore(VectorStore):
-    """
-    FAISS-backed vector store with disk persistence.
-    """
-
     def __init__(self, dim: int):
         import faiss
         self.dim = dim
@@ -67,6 +63,7 @@ class FAISSVectorStore(VectorStore):
 
     def save(self, path: Path) -> None:
         import faiss
+
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
@@ -74,14 +71,14 @@ class FAISSVectorStore(VectorStore):
         np.save(path / "metadatas.npy", np.array(self.metadatas, dtype=object))
 
     def load(self, index_path: Path) -> None:
+
         import faiss
-        from pathlib import Path
 
-        index_path = Path(index_path)
+        path = Path(path)
 
-        self.index = faiss.read_index(str(index_path / "index.faiss"))
+        self.index = faiss.read_index(str(path / "index.faiss"))
         self.metadatas = np.load(
-            index_path / "metadatas.npy",
-            allow_pickle=True
+            path / "metadatas.npy",
+            allow_pickle=True,
         ).tolist()
 
