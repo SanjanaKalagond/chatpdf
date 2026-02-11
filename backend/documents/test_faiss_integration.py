@@ -1,4 +1,3 @@
-from pathlib import Path
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
@@ -26,7 +25,6 @@ class DjangoFAISSIntegrationTests(TestCase):
             question="What is LangChain?",
             embedding_provider=DummyEmbeddingProvider(),
             llm=DummyLLM(),
-            index_dir=Path("vector_index"),
         )
         self.assertIsNotNone(log.answer)
         self.assertGreater(log.latency_ms, 0)

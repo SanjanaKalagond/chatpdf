@@ -12,7 +12,6 @@ class IngestionError(Exception):
 def get_document_index_dir(document_id: int) -> Path:
     return Path(settings.VECTOR_INDEX_ROOT) / f"document_{document_id}"
 
-
 @transaction.atomic
 def ingest_document(
     *,
@@ -21,7 +20,7 @@ def ingest_document(
 ) -> None:
 
     if document.is_processed:
-        pass
+        return
 
     if not document.pdf_file:
         raise IngestionError("Document has no file attached")
@@ -65,5 +64,6 @@ def ingest_document(
         index_dir.mkdir(parents=True, exist_ok=True)
 
     vector_store.save(index_dir)
+
     document.is_processed = True
     document.save(update_fields=["is_processed"])

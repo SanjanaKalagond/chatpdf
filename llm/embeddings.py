@@ -44,9 +44,14 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         return 1536
 
 class HuggingFaceEmbeddingProvider(EmbeddingProvider):
+    _model = None
+
     def __init__(self, model_name: str = "sentence-transformers/all-MiniLM-L6-v2"):
-        from sentence_transformers import SentenceTransformer
-        self.model = SentenceTransformer(model_name)
+        if HuggingFaceEmbeddingProvider._model is None:
+            from sentence_transformers import SentenceTransformer
+            HuggingFaceEmbeddingProvider._model = SentenceTransformer(model_name)
+
+        self.model = HuggingFaceEmbeddingProvider._model
 
     def embed(self, texts: List[str]) -> List[List[float]]:
         embeddings = self.model.encode(texts, normalize_embeddings=True)

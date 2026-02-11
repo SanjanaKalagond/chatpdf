@@ -1,32 +1,35 @@
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.messages import HumanMessage, AIMessage
-from langchain_core.documents import Document
 from langchain_core.output_parsers import StrOutputParser
-from langchain_core.runnables import RunnableLambda
-from .prompts import SYSTEM_PROMPT, REFUSAL_TEXT
 
 
 def build_rag_chain(llm):
+    """
+    Builds a simple RAG chain:
+    Prompt -> LLM -> String output
+
+    The chain expects:
+        {
+            "question": str,
+            "context": str
+        }
+    """
+
     prompt = ChatPromptTemplate.from_messages(
         [
-            ("system", SYSTEM_PROMPT),
-            ("human", "Context:\n{context}\n\nQuestion:\n{question}"),
+            (
+                "system",
+                (
+                    "You are a question-answering assistant.\n"
+                    "Answer ONLY using the provided context.\n"
+                    "If the answer is not in the context, say:\n"
+                    "\"I don't know based on the provided documents.\""
+                ),
+            ),
+            (
+                "human",
+                "Context:\n{context}\n\nQuestion:\n{question}",
+            ),
         ]
     )
-    if hasattr(llm, "invoke"):
-        llm_runnable = RunnableLambda(
-            lambda x: llm.invoke(x)
-        )
-    else:
-        llm_runnable = llm
 
-    chain = (
-        prompt
-        | llm_runnable
-        | StrOutputParser()
-    )
-    return chain
-def postprocess_answer(answer: str, context: str) -> str:
-    if not context.strip():
-        return REFUSAL_TEXT
-    return answer
+    return prompt | llm | StrOutputParser()

@@ -7,12 +7,12 @@ class VectorStore(ABC):
     @abstractmethod
     def add(self, embeddings: List[List[float]], metadatas: List[dict]):
         pass
+
     @abstractmethod
     def search(self, query_embedding: List[float], k: int = 5) -> List[dict]:
         pass
-        
-class InMemoryVectorStore(VectorStore):
 
+class InMemoryVectorStore(VectorStore):
     def __init__(self):
         self.vectors = []
         self.metadatas = []
@@ -44,12 +44,20 @@ class FAISSVectorStore(VectorStore):
 
     def add(self, embeddings: List[List[float]], metadatas: List[dict]):
         vectors = np.array(embeddings).astype("float32")
+        if vectors.shape[1] != self.dim:
+            raise ValueError("Embedding dimension mismatch during add")
         self.index.add(vectors)
         self.metadatas.extend(metadatas)
 
     def search(self, query_embedding: List[float], k: int = 5) -> List[dict]:
         if self.index.ntotal == 0:
             return []
+
+        if len(query_embedding) != self.index.d:
+            raise ValueError(
+                f"FAISS dimension mismatch: index={self.index.d}, query={len(query_embedding)}"
+            )
+
         query = np.array([query_embedding]).astype("float32")
         _, indices = self.index.search(query, k)
 
@@ -63,22 +71,17 @@ class FAISSVectorStore(VectorStore):
 
     def save(self, path: Path) -> None:
         import faiss
-
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
-
         faiss.write_index(self.index, str(path / "index.faiss"))
         np.save(path / "metadatas.npy", np.array(self.metadatas, dtype=object))
 
-    def load(self, index_path: Path) -> None:
-
+    def load(self, path: Path) -> None:
         import faiss
-
         path = Path(path)
-
         self.index = faiss.read_index(str(path / "index.faiss"))
+        self.dim = self.index.d
         self.metadatas = np.load(
             path / "metadatas.npy",
             allow_pickle=True,
         ).tolist()
-

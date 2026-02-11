@@ -33,3 +33,4 @@ staticfiles/
 backend/documents/uploads/
 *.pdf
 backend/vector_index/
+backend/pdfs/

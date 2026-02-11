@@ -1,6 +1,8 @@
 import os
 import sys
 import django
+import requests
+import pandas as pd
 from pathlib import Path
 
 CURRENT_DIR = Path(__file__).resolve().parent
@@ -15,103 +17,193 @@ if str(BACKEND_DIR) not in sys.path:
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "chatpdf_backend.settings")
 django.setup()
 
-
 import streamlit as st
-from pypdf import PdfReader 
-from langchain_google_genai import ChatGoogleGenerativeAI # pip install langchain-google-genai
-from llm.embeddings import DummyEmbeddingProvider
-from llm.vectorstore import InMemoryVectorStore
-from llm.retrieval import retrieve_context
-from llm.graph import build_qa_graph
-from llm.prompts import REFUSAL_TEXT
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 
-def extract_text(file):
-    """Handles both PDF and TXT extraction."""
-    if file.name.lower().endswith(".pdf"):
-        reader = PdfReader(file)
-        text = ""
-        for page in reader.pages:
-            content = page.extract_text()
-            if content:
-                text += content + "\n"
-        return text
-    else:
-        return file.read().decode("utf-8", errors="ignore")
 
-def get_gemini_llm(api_key):
-    return ChatGoogleGenerativeAI(
-        model="gemini-3-flash-preview", 
-        google_api_key=api_key,
-        temperature=0,
-    )
+DJANGO_BASE_URL = "http://127.0.0.1:8000"
+API_TOKEN = os.environ.get("STREAMLIT_API_KEY", "dev-streamlit-key")
 
-st.set_page_config(page_title="ChatPDF", layout="wide")
-
+st.set_page_config(page_title="ChatPDF + CSV", layout="wide")
 st.title("ChatPDF")
+
+
+for key, default in {
+    "chat_history": [],
+    "document_id": None,
+    "csv_df": None,
+    "last_file_name": None,
+    "api_key": None,
+    "provider": "gemini",
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
+
+
 with st.sidebar:
     st.header("Settings")
-    env_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
-    
-    if env_key:
-        api_key = env_key
-        st.success("Key loaded from environment")
+
+    provider = st.selectbox(
+        "LLM Provider",
+        ["gemini", "openai"],
+        index=0 if st.session_state.provider == "gemini" else 1,
+    )
+    st.session_state.provider = provider
+
+    api_key_input = st.text_input(
+        f"{provider.upper()} API Key",
+        type="password",
+        value=st.session_state.api_key or "",
+    )
+
+    if api_key_input:
+        st.session_state.api_key = api_key_input
+        st.success(f"{provider.upper()} API key loaded")
+
+    if API_TOKEN:
+        st.success("Connected to Django backend")
     else:
-        api_key = st.text_input("Google/Gemini API Key", type="password")
-        if api_key:
-            os.environ["GOOGLE_API_KEY"] = api_key
-            st.success("Key loaded manually")
-        else:
-            st.warning("Enter your Gemini API key to continue")
+        st.warning("STREAMLIT_API_KEY not set")
 
-uploaded_file = st.file_uploader("Upload a document", type=["txt", "pdf"])
-question = st.text_input("Ask Gemini a question about the content")
 
-if uploaded_file and question and api_key:
-    with st.spinner("Gemini is reading your document..."):
-        document_text = extract_text(uploaded_file)
+def django_post(path, *, files=None, json=None):
+    headers = {
+        "Authorization": f"Bearer {API_TOKEN}",
+        "X-LLM-PROVIDER": st.session_state.provider,
+        "X-LLM-API-KEY": st.session_state.api_key or "",
+    }
 
-        if not document_text.strip():
-            st.error("No text found. PDF might be image-only.")
-            st.stop()
+    url = f"{DJANGO_BASE_URL}{path}"
+    r = requests.post(url, headers=headers, files=files, json=json, timeout=60)
 
-        context, citations = retrieve_context(
-            document_text=document_text,
-            question=question,
-            embedding_provider=DummyEmbeddingProvider(),
-            vector_store=InMemoryVectorStore(),
-        )
+    if r.status_code not in (200, 201):
+        try:
+            error = r.json()
+            st.error(error.get("error", "Unknown backend error"))
+        except Exception:
+            st.error(f"Backend error: {r.status_code}")
+        st.stop()
 
-        llm = get_gemini_llm(api_key)
-        graph = build_qa_graph(llm)
+    return r.json()
 
-        result = graph.invoke({
-            "question": question,
-            "context": context,
-            "citations": citations,
-            "answer": None,
-            "error": None,
-            "tokens_used": None,
-        })
 
-    st.divider()
-    col1, col2 = st.columns([2, 1])
+uploaded_file = st.file_uploader("Upload a document", type=["csv", "txt", "pdf"])
 
-    with col1:
-        st.subheader("Answer")
-        if result["answer"] == REFUSAL_TEXT:
-            st.warning(result["answer"])
-        else:
-            st.success("Grounded Answer Generated")
-            st.write(result["answer"])
+if uploaded_file:
 
-    with col2:
-        st.subheader("Source References")
-        if citations:
-            for idx, cite in enumerate(citations):
-                with st.expander(f"Reference {idx + 1}"):
-                    st.write(cite.get("chunk_text", "No preview available"))
-        else:
-            st.info("No sources returned")
+    if uploaded_file.name != st.session_state.last_file_name:
+        st.session_state.last_file_name = uploaded_file.name
+        st.session_state.chat_history = []
+        st.session_state.document_id = None
+        st.session_state.csv_df = None
 
-    with st.expander("Raw Retrieved Context (Debug)"):
-        st.text(context)
+    if uploaded_file.name.lower().endswith(".csv"):
+
+        if st.session_state.csv_df is None:
+            st.session_state.csv_df = pd.read_csv(uploaded_file)
+
+        df = st.session_state.csv_df
+
+        st.subheader("CSV Preview")
+        st.dataframe(df.head())
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write("Shape:", df.shape)
+            st.write("Columns:", df.columns.tolist())
+        with col2:
+            st.dataframe(df.describe())
+
+        for turn in st.session_state.chat_history:
+            st.markdown(f"**You:** {turn['question']}")
+            st.markdown(f"**ChatCSV:** {turn['answer']}")
+            st.markdown("---")
+
+        with st.form("csv_chat", clear_on_submit=True):
+            question = st.text_area("Ask about the CSV", height=80)
+            submitted = st.form_submit_button("Send")
+
+        if submitted:
+            question = question.strip()
+            if not question:
+                st.stop()
+
+            if not st.session_state.api_key:
+                st.error("Please enter an API key in the sidebar.")
+                st.stop()
+
+            # Provider-aware LLM (CSV stays frontend-only)
+            if st.session_state.provider == "gemini":
+                llm = ChatGoogleGenerativeAI(
+                    model="gemini-2.5-flash-lite",
+                    google_api_key=st.session_state.api_key,
+                    temperature=0,
+                )
+            else:
+                llm = ChatOpenAI(
+                    model="gpt-4o-mini",
+                    api_key=st.session_state.api_key,
+                    temperature=0,
+                )
+
+            prompt = f"""
+Columns: {list(df.columns)}
+Shape: {df.shape}
+Summary:
+{df.describe().to_string()}
+
+Question: {question}
+"""
+
+            response = llm.invoke(prompt)
+            answer = response.content
+
+            st.session_state.chat_history.append(
+                {"question": question, "answer": answer}
+            )
+
+            st.rerun()
+
+    else:
+
+        if st.session_state.document_id is None:
+            with st.spinner("Uploading to Django..."):
+                result = django_post(
+                    "/api/documents/upload/",
+                    files={"file": (uploaded_file.name, uploaded_file.getvalue())},
+                )
+                st.session_state.document_id = result["document_id"]
+                st.success(f"Uploaded document (ID {st.session_state.document_id})")
+
+        for turn in st.session_state.chat_history:
+            st.markdown(f"**You:** {turn['question']}")
+            st.markdown(f"**ChatPDF:** {turn['answer']}")
+            st.markdown("---")
+
+        with st.form("doc_chat", clear_on_submit=True):
+            question = st.text_area("Ask about the document", height=80)
+            submitted = st.form_submit_button("Send")
+
+        if submitted:
+            question = question.strip()
+
+            if not question:
+                st.stop()
+
+            if not st.session_state.api_key:
+                st.error("Please enter an API key in the sidebar.")
+                st.stop()
+
+            result = django_post(
+                f"/api/documents/{st.session_state.document_id}/query/",
+                json={"question": question},
+            )
+
+            answer = result["answer"]
+
+            st.session_state.chat_history.append(
+                {"question": question, "answer": answer}
+            )
+
+            st.rerun()

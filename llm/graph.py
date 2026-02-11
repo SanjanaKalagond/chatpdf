@@ -1,6 +1,6 @@
 from typing import TypedDict, Optional, List
 from langgraph.graph import StateGraph, END
-from .chains import build_rag_chain, postprocess_answer
+from .chains import build_rag_chain
 from .prompts import REFUSAL_TEXT
 from .tokens import count_tokens
 from .grounding import enforce_grounding
@@ -39,7 +39,7 @@ def build_qa_graph(llm):
         )
 
         answer = enforce_grounding(
-            answer=postprocess_answer(raw, state["context"]),
+            answer=raw,
             citations=state["citations"],
         )
 

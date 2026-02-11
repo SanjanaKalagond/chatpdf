@@ -3,10 +3,8 @@ from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 
 from documents.models import Document
-from documents.services import (
-    answer_document_question,
-    ingest_document_into_faiss,
-)
+from documents.services import answer_document_question
+from documents.ingestion import ingest_document
 from llm.embeddings import DummyEmbeddingProvider
 from documents.tests import DummyLLM
 from llm.prompts import REFUSAL_TEXT
@@ -28,7 +26,7 @@ class EndToEndQATest(TestCase):
             ContentFile("LangChain is a framework for LLMs."),
         )
 
-        ingest_document_into_faiss(
+        ingest_document(
             document=doc,
             embedding_provider=DummyEmbeddingProvider(),
         )
