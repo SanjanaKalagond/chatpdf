@@ -82,6 +82,11 @@ MEDIA_ROOT = BASE_DIR / "media"
 VECTOR_INDEX_ROOT = BASE_DIR / "vector_index"
 
 STREAMLIT_API_KEY = os.environ.get("STREAMLIT_API_KEY", "dev-streamlit-key")
+CSRF_TRUSTED_ORIGINS = []
 
-if 'CODESPACE_NAME' in os.environ:
-    CSRF_TRUSTED_ORIGINS = [f"https://{os.environ['CODESPACE_NAME']}-8000.app.github.dev"]
+if "CODESPACE_NAME" in os.environ:
+    CSRF_TRUSTED_ORIGINS.append(
+        f"https://{os.environ['CODESPACE_NAME']}-8000.app.github.dev"
+    )
+
+CSRF_TRUSTED_ORIGINS.append("https://chatpdf-6t37.onrender.com")
