@@ -3,3 +3,6 @@ requests
 boto3
 streamlit
 python-dotenv
+langchain-google-genai
+langchain-openai
+langchain
