@@ -1,3 +1,15 @@
 -r backend.txt
 -r llm.txt
+Django
+boto3
+faiss-cpu
+numpy
+pdfplumber
+langchain
+langchain-google-genai
+langchain-openai
+sentence-transformers
+tiktoken
+requests
+streamlit
 python-dotenv
