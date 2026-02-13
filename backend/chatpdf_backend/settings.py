@@ -7,7 +7,12 @@ SECRET_KEY = "dev-secret-key-change-later"
 
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1", ".app.github.dev"]
+ALLOWED_HOSTS = [
+    "localhost",
+    "127.0.0.1",
+    ".app.github.dev",
+    ".onrender.com",
+]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
