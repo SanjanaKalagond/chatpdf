@@ -22,7 +22,8 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
 
-DJANGO_BASE_URL = "http://127.0.0.1:8000"
+#DJANGO_BASE_URL = "http://127.0.0.1:8000"
+DJANGO_BASE_URL = "https://chatpdf-6t37.onrender.com"
 API_TOKEN = os.environ.get("STREAMLIT_API_KEY", "dev-streamlit-key")
 
 st.set_page_config(page_title="ChatPDF + CSV", layout="wide")
