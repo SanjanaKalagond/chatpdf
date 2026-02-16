@@ -25,7 +25,7 @@ def retrieve_context_from_faiss(
     question: str,
     embedding_provider: EmbeddingProvider,
     vector_store: FAISSVectorStore,
-    k: int = 8,
+    k: int = 200,
 ) -> Tuple[str, List[dict]]:
     query_embedding = embedding_provider.embed([question])[0]
 

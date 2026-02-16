@@ -5,6 +5,8 @@ from .models import Document
 from llm.chunking import chunk_text
 from llm.embeddings import EmbeddingProvider
 from llm.vectorstore import FAISSVectorStore
+from pypdf import PdfReader
+import io
 
 class IngestionError(Exception):
     pass
@@ -31,10 +33,25 @@ def ingest_document(
     finally:
         document.pdf_file.close()
 
-    try:
-        text = raw_bytes.decode("utf-8", errors="ignore")
-    except Exception as e:
-        raise IngestionError(f"Failed to decode document: {e}")
+    filename = document.filename.lower()
+
+    if filename.endswith(".pdf"):
+        try:
+            reader = PdfReader(io.BytesIO(raw_bytes))
+            text = ""
+            for page in reader.pages:
+                extracted = page.extract_text()
+                if extracted:
+                    text += extracted + "\n"
+        except Exception as e:
+            raise IngestionError(f"Failed to extract PDF text: {e}")
+    else:
+        try:
+            text = raw_bytes.decode("utf-8", errors="ignore")
+        except Exception as e:
+            raise IngestionError(f"Failed to decode document: {e}")
+
+    print("TEXT LENGTH:", len(text))
 
     if not text.strip():
         raise IngestionError("Document text is empty")

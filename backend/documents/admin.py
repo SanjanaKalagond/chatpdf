@@ -2,8 +2,8 @@ from django.contrib import admin
 from django.contrib import messages
 from .models import Document, QueryLog
 from .ingestion import ingest_document
-from llm.embeddings import DummyEmbeddingProvider
-
+#from llm.embeddings import DummyEmbeddingProvider
+from llm.embeddings import HuggingFaceEmbeddingProvider
 @admin.register(Document)
 class DocumentAdmin(admin.ModelAdmin):
     list_display = (
@@ -30,7 +30,8 @@ class DocumentAdmin(admin.ModelAdmin):
 
     @admin.action(description="Ingest (build FAISS index)")
     def rebuild_faiss_index(self, request, queryset):
-        embedding_provider = DummyEmbeddingProvider()
+        #embedding_provider = DummyEmbeddingProvider()
+        embedding_provider = HuggingFaceEmbeddingProvider()
 
         rebuilt = 0
         skipped = 0

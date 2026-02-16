@@ -1,11 +1,14 @@
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "dev-secret-key-change-later"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-secret-key-change-later")
 
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "True") == "True"
 
 ALLOWED_HOSTS = [
     "localhost",
@@ -22,6 +25,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "documents.apps.DocumentsConfig",
+    "storages",
 ]
 
 MIDDLEWARE = [
@@ -82,12 +86,21 @@ MEDIA_ROOT = BASE_DIR / "media"
 VECTOR_INDEX_ROOT = BASE_DIR / "vector_index"
 
 STREAMLIT_API_KEY = os.environ.get("STREAMLIT_API_KEY", "dev-streamlit-key")
+
 CSRF_TRUSTED_ORIGINS = []
 
 if "CODESPACE_NAME" in os.environ:
     CSRF_TRUSTED_ORIGINS.append(
         f"https://{os.environ['CODESPACE_NAME']}-8000.app.github.dev"
-        "https://*.railway.app",
     )
 
 CSRF_TRUSTED_ORIGINS.append("https://chatpdf-6t37.onrender.com")
+
+AWS_ACCESS_KEY_ID = os.environ.get("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.environ.get("AWS_SECRET_ACCESS_KEY")
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME")
+AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME")
+
+if AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY and AWS_STORAGE_BUCKET_NAME:
+    DEFAULT_FILE_STORAGE = "storages.backends.s3boto3.S3Boto3Storage"
+    AWS_QUERYSTRING_AUTH = False
