@@ -76,7 +76,7 @@ def django_post(path, *, files=None, json=None):
     }
 
     url = f"{DJANGO_BASE_URL}{path}"
-    r = requests.post(url, headers=headers, files=files, json=json, timeout=60)
+    r = requests.post(url, headers=headers, files=files, json=json, timeout=600)
 
     if r.status_code not in (200, 201):
         try:
