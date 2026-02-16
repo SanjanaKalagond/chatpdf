@@ -1,11 +1,11 @@
 -r backend.txt
 -r llm.txt
 Django
-gunicorn
 boto3
 faiss-cpu
 numpy
 pdfplumber
+gunicorn
 langchain
 langchain-google-genai
 langchain-openai
