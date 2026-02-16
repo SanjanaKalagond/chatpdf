@@ -87,6 +87,7 @@ CSRF_TRUSTED_ORIGINS = []
 if "CODESPACE_NAME" in os.environ:
     CSRF_TRUSTED_ORIGINS.append(
         f"https://{os.environ['CODESPACE_NAME']}-8000.app.github.dev"
+        "https://*.railway.app",
     )
 
 CSRF_TRUSTED_ORIGINS.append("https://chatpdf-6t37.onrender.com")
