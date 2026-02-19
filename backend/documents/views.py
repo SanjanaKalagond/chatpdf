@@ -1,5 +1,5 @@
 import json
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
 from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import csrf_exempt
 from django.core.exceptions import PermissionDenied
@@ -11,6 +11,7 @@ from langchain_openai import ChatOpenAI
 
 from .models import Document
 from .services import get_user_document, answer_document_question
+from .pdf_utils import generate_pdf
 from llm.embeddings import HuggingFaceEmbeddingProvider
 
 User = get_user_model()
@@ -58,7 +59,6 @@ def get_llm_from_request(request):
     return None, f"Unsupported LLM provider: {provider}"
 
 
-
 @csrf_exempt
 @require_POST
 def upload_document(request):
@@ -89,7 +89,6 @@ def upload_document(request):
         return JsonResponse({"error": str(e)}, status=500)
 
 
-
 @csrf_exempt
 @require_POST
 def query_document(request, document_id):
@@ -115,6 +114,19 @@ def query_document(request, document_id):
             embedding_provider=HuggingFaceEmbeddingProvider(),
             llm=llm,
         )
+
+        if payload.get("download_pdf"):
+            pdf_buffer = generate_pdf(
+                title="ChatPDF Technical Specification",
+                content=log.answer,
+            )
+
+            return FileResponse(
+                pdf_buffer,
+                as_attachment=True,
+                filename="ChatPDF_Output.pdf",
+                content_type="application/pdf",
+            )
 
         return JsonResponse(
             {

@@ -21,15 +21,26 @@ import streamlit as st
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_openai import ChatOpenAI
 
-
 DJANGO_BASE_URL = "http://127.0.0.1:8000"
-#DJANGO_BASE_URL = "https://chatpdf-6t37.onrender.com"
 API_TOKEN = os.environ.get("STREAMLIT_API_KEY", "dev-streamlit-key")
 
 st.set_page_config(page_title="ChatPDF + CSV", layout="wide")
 st.title("ChatPDF")
 
+# Cleaner document styling
+st.markdown("""
+<style>
+section.main > div {
+    max-width: 1000px;
+}
+h1 { color: #1f4e79; }
+h2 { color: #1f4e79; }
+h3 { color: #1f4e79; }
+strong { color: #b30000; }
+</style>
+""", unsafe_allow_html=True)
 
+# Session state initialization
 for key, default in {
     "chat_history": [],
     "document_id": None,
@@ -41,7 +52,7 @@ for key, default in {
     if key not in st.session_state:
         st.session_state[key] = default
 
-
+# Sidebar
 with st.sidebar:
     st.header("Settings")
 
@@ -67,8 +78,8 @@ with st.sidebar:
     else:
         st.warning("STREAMLIT_API_KEY not set")
 
-
-def django_post(path, *, files=None, json=None):
+# Backend helper
+def django_post(path, *, files=None, json=None, stream=False):
     headers = {
         "Authorization": f"Bearer {API_TOKEN}",
         "X-LLM-PROVIDER": st.session_state.provider,
@@ -76,7 +87,7 @@ def django_post(path, *, files=None, json=None):
     }
 
     url = f"{DJANGO_BASE_URL}{path}"
-    r = requests.post(url, headers=headers, files=files, json=json, timeout=600)
+    r = requests.post(url, headers=headers, files=files, json=json, timeout=600, stream=stream)
 
     if r.status_code not in (200, 201):
         try:
@@ -86,8 +97,7 @@ def django_post(path, *, files=None, json=None):
             st.error(f"Backend error: {r.status_code}")
         st.stop()
 
-    return r.json()
-
+    return r
 
 uploaded_file = st.file_uploader("Upload a document", type=["csv", "txt", "pdf"])
 
@@ -99,6 +109,7 @@ if uploaded_file:
         st.session_state.document_id = None
         st.session_state.csv_df = None
 
+    # CSV MODE
     if uploaded_file.name.lower().endswith(".csv"):
 
         if st.session_state.csv_df is None:
@@ -117,8 +128,10 @@ if uploaded_file:
             st.dataframe(df.describe())
 
         for turn in st.session_state.chat_history:
-            st.markdown(f"**You:** {turn['question']}")
-            st.markdown(f"**ChatCSV:** {turn['answer']}")
+            st.markdown("### 🧑 You")
+            st.markdown(turn["question"])
+            st.markdown("---")
+            st.markdown(turn["answer"])
             st.markdown("---")
 
         with st.form("csv_chat", clear_on_submit=True):
@@ -134,7 +147,6 @@ if uploaded_file:
                 st.error("Please enter an API key in the sidebar.")
                 st.stop()
 
-            # Provider-aware LLM (CSV stays frontend-only)
             if st.session_state.provider == "gemini":
                 llm = ChatGoogleGenerativeAI(
                     model="gemini-2.5-flash-lite",
@@ -166,24 +178,31 @@ Question: {question}
 
             st.rerun()
 
+    # DOCUMENT MODE
     else:
 
         if st.session_state.document_id is None:
             with st.spinner("Uploading to Django..."):
-                result = django_post(
+                r = django_post(
                     "/api/documents/upload/",
                     files={"file": (uploaded_file.name, uploaded_file.getvalue())},
                 )
+                result = r.json()
                 st.session_state.document_id = result["document_id"]
                 st.success(f"Uploaded document (ID {st.session_state.document_id})")
 
         for turn in st.session_state.chat_history:
-            st.markdown(f"**You:** {turn['question']}")
-            st.markdown(f"**ChatPDF:** {turn['answer']}")
+            st.markdown("### You")
+            st.markdown(turn["question"])
+            st.markdown("---")
+
+            st.markdown("## Generated Document")
+            st.markdown(turn["answer"])
             st.markdown("---")
 
         with st.form("doc_chat", clear_on_submit=True):
             question = st.text_area("Ask about the document", height=80)
+            download_pdf = st.checkbox("Download as PDF")
             submitted = st.form_submit_button("Send")
 
         if submitted:
@@ -196,15 +215,30 @@ Question: {question}
                 st.error("Please enter an API key in the sidebar.")
                 st.stop()
 
-            result = django_post(
-                f"/api/documents/{st.session_state.document_id}/query/",
-                json={"question": question},
-            )
+            if download_pdf:
+                r = django_post(
+                    f"/api/documents/{st.session_state.document_id}/query/",
+                    json={"question": question, "download_pdf": True},
+                    stream=True,
+                )
 
-            answer = result["answer"]
+                st.download_button(
+                    "Download PDF",
+                    data=r.content,
+                    file_name="ChatPDF_Output.pdf",
+                    mime="application/pdf",
+                )
+            else:
+                r = django_post(
+                    f"/api/documents/{st.session_state.document_id}/query/",
+                    json={"question": question},
+                )
 
-            st.session_state.chat_history.append(
-                {"question": question, "answer": answer}
-            )
+                result = r.json()
+                answer = result["answer"]
 
-            st.rerun()
+                st.session_state.chat_history.append(
+                    {"question": question, "answer": answer}
+                )
+
+                st.rerun()
