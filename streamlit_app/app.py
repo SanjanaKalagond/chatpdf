@@ -27,7 +27,6 @@ API_TOKEN = os.environ.get("STREAMLIT_API_KEY", "dev-streamlit-key")
 st.set_page_config(page_title="ChatPDF + CSV", layout="wide")
 st.title("ChatPDF")
 
-# Cleaner document styling
 st.markdown("""
 <style>
 section.main > div {
@@ -40,7 +39,6 @@ strong { color: #b30000; }
 </style>
 """, unsafe_allow_html=True)
 
-# Session state initialization
 for key, default in {
     "chat_history": [],
     "document_id": None,
@@ -52,7 +50,6 @@ for key, default in {
     if key not in st.session_state:
         st.session_state[key] = default
 
-# Sidebar
 with st.sidebar:
     st.header("Settings")
 
@@ -78,7 +75,6 @@ with st.sidebar:
     else:
         st.warning("STREAMLIT_API_KEY not set")
 
-# Backend helper
 def django_post(path, *, files=None, json=None, stream=False):
     headers = {
         "Authorization": f"Bearer {API_TOKEN}",
@@ -109,7 +105,6 @@ if uploaded_file:
         st.session_state.document_id = None
         st.session_state.csv_df = None
 
-    # CSV MODE
     if uploaded_file.name.lower().endswith(".csv"):
 
         if st.session_state.csv_df is None:
@@ -128,7 +123,7 @@ if uploaded_file:
             st.dataframe(df.describe())
 
         for turn in st.session_state.chat_history:
-            st.markdown("### 🧑 You")
+            st.markdown("### You")
             st.markdown(turn["question"])
             st.markdown("---")
             st.markdown(turn["answer"])
@@ -178,7 +173,6 @@ Question: {question}
 
             st.rerun()
 
-    # DOCUMENT MODE
     else:
 
         if st.session_state.document_id is None:
